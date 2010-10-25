@@ -1,0 +1,57 @@
+#!/bin/env python
+
+class SVar:
+    "A subscribable variable"
+    def __init__(self):
+        pass
+
+class VarTree:
+    real_attrs = ["_vars", "_name"]
+
+    def __init__(self, name = "Unknown"):
+        self._vars = {}
+        self._name = name
+
+    def __setattr__(self, name, value):
+        if name in self.__dict__ or name in VarTree.real_attrs:
+            self.__dict__[name] = value
+            return
+
+        if isinstance( value, VarTree ):
+            value._name = "%s.%s" % (self._name, name)
+
+        self.__dict__["_vars"][name] = value
+
+        # TODO: Emit excitement about this change in value
+        print "var changed: \"%s.%s\" := \"%s\"" % ( self._name, name, value)
+
+    def __getattr__(self, name):
+        if name in self._vars:
+            return self._vars[name]
+
+        raise AttributeError
+
+    def __delattr__(self, name):
+        self._vars.popitem(name)
+
+class Clock:
+    "Clock for the event"
+    def __init__(self, root):
+        self.tree = VarTree()
+        root.clock = self.tree
+
+        self.tree.event_time = 0
+        self.tree.paused_time = 0
+        self.tree.paused = False
+
+if __name__ == "__main__":
+    root = VarTree("sr")
+
+    worker_classes = [Clock]
+    workers = [ x(root) for x in worker_classes ]
+
+
+# # TODO: Store vars in MySQL
+
+# loop = gobject.MainLoop()
+# loop.run()
