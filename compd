@@ -1,9 +1,28 @@
 #!/bin/env python
+import gobject, glib
 
 class SVar:
     "A subscribable variable"
     def __init__(self):
-        pass
+        self.subscribers = []
+        self.value = None
+
+    def set(self, val):
+        self.value = val
+        self._emit()
+
+    def get(self):
+        return self.value
+
+    def subscribe(self, fn, args):
+        self.subscribers.append( (fn, args) )
+
+    def unsubscribe(self, fn):
+        self.subscribers = [ x for x in self.subscribers if x[0] != fn ]
+
+    def _emit(self):
+        for sub in self.subscribers:
+            sub[0]( self.value, *sub[1] )
 
 class VarTree:
     real_attrs = ["_vars", "_name"]
@@ -17,22 +36,48 @@ class VarTree:
             self.__dict__[name] = value
             return
 
+        _vars = self.__dict__["_vars"]
+
         if isinstance( value, VarTree ):
             value._name = "%s.%s" % (self._name, name)
+            _vars[name] = value
 
-        self.__dict__["_vars"][name] = value
+        else:
+            if name not in _vars:
+                _vars[name] = SVar()
 
-        # TODO: Emit excitement about this change in value
-        print "var changed: \"%s.%s\" := \"%s\"" % ( self._name, name, value)
+            _vars[name].set(value)
 
     def __getattr__(self, name):
         if name in self._vars:
-            return self._vars[name]
+            val = self._vars[name]
+
+            if isinstance( val, VarTree ):
+                return val
+
+            return val.get()
 
         raise AttributeError
 
     def __delattr__(self, name):
         self._vars.popitem(name)
+
+    def subscribe(self, name, fn, args = []):
+        s = name.split(".")
+        bn = s[0]
+
+        v = self._vars[s[0]]
+
+        if isinstance( v, VarTree ):
+            if len(s) == 1:
+                raise Exception("Subscription to VarTrees not (yet?) supported")
+
+            return v.subscribe( ".".join(s[1:]), fn, args )
+
+        v.subscribe(fn, args)
+
+    def unsubscribe(self, name, fn):
+        pass
 
 class Clock:
     "Clock for the event"
@@ -44,14 +89,44 @@ class Clock:
         self.tree.paused_time = 0
         self.tree.paused = False
 
-if __name__ == "__main__":
-    root = VarTree("sr")
+        glib.timeout_add( 1000, self.tick )
 
-    worker_classes = [Clock]
-    workers = [ x(root) for x in worker_classes ]
+    def tick(self):
+        self.tree.event_time += 1
 
+        return True
+
+class Scheduler:
+    "Tells us what slot we're currently in"
+
+    def __init__(self, root):
+        self.tree = VarTree()
+        root.scheduler = self.tree
+
+        self.tree.curslot_id = 0
+        self.tree.curslot_duration = 0
+        self.tree.curslot_time = 0
+        self.tree.curslot_type = 0
+
+        root.subscribe( "clock.event_time", self.tick )
+
+    def tick(self, event_time):
+        if event_time % 20 == 0:
+            self.tree.curslot_id += 1
+
+
+def test_fn(val):
+    print "test_fn", val
 
 # # TODO: Store vars in MySQL
 
-# loop = gobject.MainLoop()
-# loop.run()
+if __name__ == "__main__":
+    root = VarTree("sr")
+    loop = gobject.MainLoop()
+    main_context = loop.get_context()
+
+    worker_classes = [Clock,Scheduler]
+    workers = [ x(root) for x in worker_classes ]
+
+    root.subscribe( "clock.event_time", test_fn )
+    loop.run()
