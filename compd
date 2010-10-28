@@ -62,22 +62,30 @@ class VarTree:
     def __delattr__(self, name):
         self._vars.popitem(name)
 
-    def subscribe(self, name, fn, args = []):
+    def subscribe(root, name, fn, args = []):
         s = name.split(".")
-        bn = s[0]
+        cur = root
 
-        v = self._vars[s[0]]
+        assert s[0] == "sr"
+        s = s[1:]
 
-        if isinstance( v, VarTree ):
-            if len(s) == 1:
-                raise Exception("Subscription to VarTrees not (yet?) supported")
+        while len(s) > 0:
+            cur = cur._vars[s[0]]
+            s = s[1:]
 
-            return v.subscribe( ".".join(s[1:]), fn, args )
+        if not isinstance(cur, SVar):
+            raise AttributeError
 
-        v.subscribe(fn, args)
+        cur.subscribe( fn, args )
 
-    def unsubscribe(self, name, fn):
-        pass
+    def unsubscribe(root, fn):
+        # Traverse all nodes in the tree, unsubscribing things
+
+        for x in root._vars.items():
+            if isinstance(x, VarTree):
+                VarTree.unsubscribe( x, fn )
+            elif isinstance(x, SVar):
+                x.unsubscribe(fn)
 
 class Clock:
     "Clock for the event"
@@ -108,7 +116,7 @@ class Scheduler:
         self.tree.curslot_time = 0
         self.tree.curslot_type = 0
 
-        root.subscribe( "clock.event_time", self.tick )
+        root.subscribe( "sr.clock.event_time", self.tick )
 
     def tick(self, event_time):
         if event_time % 20 == 0:
@@ -128,5 +136,5 @@ if __name__ == "__main__":
     worker_classes = [Clock,Scheduler]
     workers = [ x(root) for x in worker_classes ]
 
-    root.subscribe( "clock.event_time", test_fn )
+    VarTree.subscribe( root, "sr.clock.event_time", test_fn )
     loop.run()
