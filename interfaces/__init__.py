@@ -1,4 +1,3 @@
-#!/bin/env python
 # Copyright 2010 Robert Spanton
 # This file is part of compd.
 #
@@ -14,29 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
-import gobject, glib, sys, os
+import text
 
-# Augment the import path with our own
-sys.path.append( os.path.dirname( os.path.abspath(__file__) ) )
-
-import workers, interfaces
-from vartree import VarTree
-
-def test_fn(val):
-    print "test_fn", val
-
-# # TODO: Store vars in MySQL
-
-if __name__ == "__main__":
-    root = VarTree("sr")
-    loop = gobject.MainLoop()
-    main_context = loop.get_context()
-
-    # Initialise all the workers
-    w = [ x(root) for x in workers.workers ]
-
-    # Same for the interfaces
-    ifs = [ x(root) for x in interfaces.interfaces ]
-
-    VarTree.subscribe( root, "sr.clock.event_time", test_fn )
-    loop.run()
+interfaces = [text.Text]
