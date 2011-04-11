@@ -25,7 +25,7 @@ class TextClient:
         self.discon_cb = discon_cb
 
         # Incoming data buffer
-        self.buf = ""
+        self.inbuf = ""
 
         self.sources = []
         self.sources += [glib.io_add_watch( self.sock, glib.IO_IN, self._read )]
@@ -39,11 +39,11 @@ class TextClient:
             self._cleanup()
             return False
 
-        self.buf = self.buf + r
+        self.inbuf = self.inbuf + r
 
-        while "\n" in self.buf:
-            line = self.buf[:self.buf.find("\n")]
-            self.buf = self.buf[len(line)+1:]
+        while "\n" in self.inbuf:
+            line = self.inbuf[:self.inbuf.find("\n")]
+            self.inbuf = self.inbuf[len(line)+1:]
 
             self._proc_cmd(line)
 
