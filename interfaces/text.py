@@ -16,6 +16,7 @@
 "A simple text-based socket interface"
 import glib, socket, sys, os
 from vartree import VarTree
+import traceback
 
 class TextClient:
     def __init__(self, sock, root, discon_cb):
@@ -50,11 +51,25 @@ class TextClient:
 
     def _proc_cmd(self, line):
         "Parse and process a single command"
+        CMDS = { "sub": self._cmd_sub }
 
-        if line[:4].lower() == "sub ":
-            print "SUB"
-            varn = line[4:].strip()
-            VarTree.subscribe( self.root, varn, self._event, args = [varn] )
+        l = line.strip().split()
+        cmd = l[0].strip().lower()
+
+        if cmd in CMDS:
+            try:
+                CMDS[cmd]( l[1:] )
+            except:
+                # TODO: Write error back
+                traceback.print_exc()
+                pass
+
+    def _cmd_sub(self, args):
+        if len(args) != 1:
+            raise Exception, "Not enough arguments to sub command."
+
+        varn = args[0]
+        VarTree.subscribe( self.root, varn, self._event, args = [varn] )
 
     def _event(self, val, varn ):
         print "ev", val, varn
