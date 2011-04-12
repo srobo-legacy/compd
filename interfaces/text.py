@@ -26,11 +26,15 @@ class TextClient:
 
         # Incoming data buffer
         self.inbuf = ""
+        # Outgoing data buffer
+        self.outbuf = ""
 
         self.sources = []
         self.sources += [glib.io_add_watch( self.sock, glib.IO_IN, self._read )]
         self.sources += [glib.io_add_watch( self.sock, glib.IO_HUP, self._hup )]
         self.sources += [glib.io_add_watch( self.sock, glib.IO_ERR, self._err )]
+
+        self.write_source = None
 
     def _read(self, source, cond):
         r = self.sock.recv( 4096, socket.MSG_DONTWAIT )
@@ -54,15 +58,16 @@ class TextClient:
         CMDS = { "sub": self._cmd_sub }
 
         l = line.strip().split()
+        if len(l) == 0:
+            return
         cmd = l[0].strip().lower()
 
         if cmd in CMDS:
             try:
                 CMDS[cmd]( l[1:] )
-            except:
-                # TODO: Write error back
-                traceback.print_exc()
-                pass
+            except Exception as e:
+                "Send the client the error"
+                self._write( "Error: %s\n" % str(e) )
 
     def _cmd_sub(self, args):
         if len(args) != 1:
@@ -70,9 +75,36 @@ class TextClient:
 
         varn = args[0]
         VarTree.subscribe( self.root, varn, self._event, args = [varn] )
+        self._write( "OK" )
 
     def _event(self, val, varn ):
-        print "ev", val, varn
+        self._write( "%s = '%s'\n" % (varn, val) )
+
+    def _write(self, s):
+        "Add the given string to the output queue"
+        self.outbuf += s
+
+        if self.write_source == None:
+            glib.io_add_watch( self.sock, glib.IO_OUT, self._txready )
+
+    def _txready(self, source, cond):
+        "Called by mainloop when socket is ready for writing"
+
+        if len(self.outbuf) == 0:
+            "No data to send -- stop calling me"
+            self.write_source = None
+            return False
+
+        r = self.sock.send( self.outbuf )
+        self.outbuf = self.outbuf[r:]
+
+        if len(self.outbuf):
+            "More to send later"
+            return True
+        else:
+            "No more to send"
+            self.write_source = None
+            return False
 
     def _hup(self, source, cond):
         print "HUP -- Currently unhandled"
