@@ -47,16 +47,19 @@ class VarTree:
 
     def __setattr__(self, name, value):
         if name in self.__dict__ or name in VarTree.real_attrs:
+            "Request for attribute that's not part of the vartree"
             self.__dict__[name] = value
             return
 
         _vars = self.__dict__["_vars"]
 
         if isinstance( value, VarTree ):
+            "Inject the provided VarTree instance into the tree"
             value._name = "%s.%s" % (self._name, name)
             _vars[name] = value
 
         else:
+            "It's a normal variable"
             if name not in _vars:
                 _vars[name] = SVar()
 
@@ -69,14 +72,17 @@ class VarTree:
             if isinstance( val, VarTree ):
                 return val
 
+            # Reached a leaf of the tree
             return val.get()
 
         raise AttributeError
 
     def __delattr__(self, name):
+        "Remove the given variable from the tree"
         self._vars.popitem(name)
 
     def subscribe(root, name, fn, args = []):
+        "Call fn with args when name variable changes"
         s = name.split(".")
         cur = root
 
