@@ -14,21 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
 import glib
-from vartree import VarTree
+import time
+from vartree import PubSubInt
 
 class Clock:
     "Clock for the event"
     def __init__(self, root):
-        self.tree = VarTree()
-        root.clock = self.tree
-
-        self.tree.event_time = 0
-        self.tree.paused_time = 0
-        self.tree.paused = False
+        self.clock = PubSubInt( val = int(time.time()),
+                                desc = "The competition clock" )
+        root.set_entry( "clock", self.clock )
 
         glib.timeout_add( 1000, self.tick )
 
     def tick(self):
-        self.tree.event_time += 1
-
+        self.clock.set( self.clock.get() + 1 )
         return True

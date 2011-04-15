@@ -15,7 +15,7 @@
 # along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
 "A simple text-based socket interface"
 import glib, socket, sys, os
-from vartree import VarTree
+import vartree
 import traceback
 
 class TextClient:
@@ -72,9 +72,10 @@ class TextClient:
     def _cmd_sub(self, args):
         if len(args) != 1:
             raise Exception, "Not enough arguments to sub command."
-
         varn = args[0]
-        VarTree.subscribe( self.root, varn, self._event, args = [varn] )
+
+        v = vartree.resolve( self.root, varn )
+        v.subscribe( self._event, args = [varn] )
         self._write( "OK" )
 
     def _event(self, val, varn ):

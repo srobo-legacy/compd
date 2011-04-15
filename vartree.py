@@ -13,96 +13,106 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
-"A tree of subscribable variables"
+"Subscribable variables"
+import re
 
-class SVar:
+def resolve(root, varname):
+    """Resolve the given variable 'path' to an object
+    i.e. Do all the necessary dictionary and list lookups."""
+
+    r = re.compile( "\\]|\\." )
+    val = root
+
+    for sub in r.split(varname):
+        if "[" in sub:
+            vname = sub[0:sub.find("[")]
+            index = int(sub[sub.find("[")+1:])
+
+            val = val.get_entry(vname)
+            val = val.get_entry(index)
+
+        else:
+            vname = sub
+            val = val.get_entry(vname)
+
+    return val
+
+class PubSubVar(object):
     "A subscribable variable"
-    def __init__(self):
+    def __init__(self, vartype, desc):
+        self.vartype = vartype
+        self.desc = desc
         self.subscribers = []
-        self.value = None
 
-    def set(self, val):
-        self.value = val
-        self._emit()
+    def get_type(self):
+        return self.vartype
 
-    def get(self):
-        return self.value
+    def get_desc(self):
+        return self.desc
 
-    def subscribe(self, fn, args):
+    def set_desc(self, val):
+        self.desc = val
+
+    def subscribe(self, fn, args = []):
         self.subscribers.append( (fn, args) )
 
     def unsubscribe(self, fn):
         self.subscribers = [ x for x in self.subscribers if x[0] != fn ]
 
-    def _emit(self):
+    def _emit(self, val):
         for sub in self.subscribers:
-            sub[0]( self.value, *sub[1] )
+            sub[0]( val, *sub[1] )
 
-class VarTree:
-    real_attrs = ["_vars", "_name"]
+class PubSubDict(PubSubVar):
+    def __init__(self, desc):
+        self.vals = {}
+        PubSubVar.__init__(self, "dict", desc)
 
-    def __init__(self, name = "Unknown"):
-        self._vars = {}
-        self._name = name
+    def set_entry(self, name, val):
+        self.vals[name] = val
 
-    def __setattr__(self, name, value):
-        if name in self.__dict__ or name in VarTree.real_attrs:
-            "Request for attribute that's not part of the vartree"
-            self.__dict__[name] = value
-            return
+    def get_entry(self, name):
+        return self.vals[name]
 
-        _vars = self.__dict__["_vars"]
+    def del_entry(self, name):
+        self.vals.pop(name)
 
-        if isinstance( value, VarTree ):
-            "Inject the provided VarTree instance into the tree"
-            value._name = "%s.%s" % (self._name, name)
-            _vars[name] = value
+    def list_entries(self, name):
+        return self.vals.keys()
 
-        else:
-            "It's a normal variable"
-            if name not in _vars:
-                _vars[name] = SVar()
+class PubSubList(PubSubVar):
+    def __init__(self, desc):
+        self.vals = []
+        PubSubVar.__init__(self, "list", desc)
 
-            _vars[name].set(value)
+    def len(self):
+        return len(self.vals)
 
-    def __getattr__(self, name):
-        if name in self._vars:
-            val = self._vars[name]
+    def remove(self, index):
+        self.vals.pop(index)
 
-            if isinstance( val, VarTree ):
-                return val
+    def get_entry(self, index):
+        return self.vals[index]
 
-            # Reached a leaf of the tree
-            return val.get()
+    def append(self, val):
+        self.vals.append(val)
 
-        raise AttributeError
+class PubSubScalar(PubSubVar):
+    def __init__(self, val, vartype, desc):
+        self.val = val
+        PubSubVar.__init__(self, vartype, desc)
 
-    def __delattr__(self, name):
-        "Remove the given variable from the tree"
-        self._vars.popitem(name)
+    def set(self, val):
+        self.val = val
+        self._emit(val)
 
-    def subscribe(root, name, fn, args = []):
-        "Call fn with args when name variable changes"
-        s = name.split(".")
-        cur = root
+    def get(self):
+        return self.val
 
-        assert s[0] == "sr"
-        s = s[1:]
+class PubSubInt(PubSubScalar):
+    def __init__(self, val, desc):
+        PubSubScalar.__init__(self, val, "int", desc)
 
-        while len(s) > 0:
-            cur = cur._vars[s[0]]
-            s = s[1:]
-
-        if not isinstance(cur, SVar):
-            raise AttributeError
-
-        cur.subscribe( fn, args )
-
-    def unsubscribe(root, fn):
-        # Traverse all nodes in the tree, unsubscribing things
-
-        for x in root._vars.items():
-            if isinstance(x, VarTree):
-                VarTree.unsubscribe( x, fn )
-            elif isinstance(x, SVar):
-                x.unsubscribe(fn)
+class PubSubString(PubSubScalar):
+    def __init__(self, val, desc):
+        PubSubScalar.__init__(self, val, "string", desc)
