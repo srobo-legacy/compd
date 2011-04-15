@@ -22,11 +22,6 @@ sys.path.append( os.path.dirname( os.path.abspath(__file__) ) )
 import workers, interfaces
 from vartree import PubSubDict
 
-def test_fn(val):
-    print "test_fn", val
-
-# # TODO: Store vars in MySQL
-
 if __name__ == "__main__":
     root = PubSubDict( desc = "Root of the tree" )
     loop = gobject.MainLoop()
@@ -38,5 +33,4 @@ if __name__ == "__main__":
     # Same for the interfaces
     ifs = [ x(root) for x in interfaces.interfaces ]
 
-    root.get_entry("clock").subscribe( test_fn )
     loop.run()
