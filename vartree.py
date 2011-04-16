@@ -77,7 +77,7 @@ class PubSubDict(PubSubVar):
     def del_entry(self, name):
         self.vals.pop(name)
 
-    def list_entries(self, name):
+    def list_entries(self):
         return self.vals.keys()
 
 class PubSubList(PubSubVar):
