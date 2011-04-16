@@ -65,7 +65,8 @@ class FramedClient:
             return False
 
         self.inbuf += r
-        self._proc_incoming()
+        while len(self.inbuf):
+            self._proc_incoming()
         return True
 
     def _proc_incoming(self):
