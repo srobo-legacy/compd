@@ -36,6 +36,26 @@ class CompdClient(FramedClient):
     def rx_frame(self, frame):
         print "CompdClient received frame:", frame
 
+        path = frame["path"]
+        var = vartree.resolve( self.root, path )
+
+        cmd_name = frame["command"]
+
+        if "args" in frame:
+            cmd_args = frame["args"]
+        else:
+            cmd_args = {}
+
+        fn = var.rpc_funcs[cmd_name]
+
+        res = fn( **cmd_args )
+
+        self.write_frame( { "result": res } )
+
+    def tx_frame(self, data):
+        self.write_frame( data )
+
+
 class CompdServer:
     def __init__(self, root, sock_type, address):
         self.root = root

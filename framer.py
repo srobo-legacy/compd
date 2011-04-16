@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
-import glib, socket, sys, os
+import glib, socket, sys, os, json
 
 def str_to_u32(s):
     assert len(s) == 4
@@ -89,12 +89,12 @@ class FramedClient:
             return
 
         block_data = self._shift_read(self.in_len)
-        self.rx_frame(block_data)
+        self.rx_frame(json.loads(block_data))
 
         # Reset the receiver
         self.in_len = None
 
-    def rx_frame(frame):
+    def rx_frame(self, frame):
         print "Received frame: %s" % frame
 
     def _shift_read(self, n_bytes):
@@ -141,6 +141,7 @@ class FramedClient:
     def write_frame(self, fdata):
         "Send the given frame"
 
+        fdata = json.dumps(fdata)
         self.outbuf += u32_to_str(len(fdata))
         self.outbuf += fdata
 

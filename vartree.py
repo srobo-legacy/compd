@@ -43,6 +43,9 @@ class PubSubVar(object):
         self.vartype = vartype
         self.desc = desc
         self.subscribers = []
+        self.rpc_funcs = { "get_type": self.get_type,
+                           "get_desc": self.get_desc,
+                           "set_desc": self.set_desc }
 
     def get_type(self):
         return self.vartype
@@ -68,6 +71,10 @@ class PubSubDict(PubSubVar):
         self.vals = {}
         PubSubVar.__init__(self, "dict", desc)
 
+        self.rpc_funcs.update( { "set_entry": self.set_entry,
+                                 "del_entry": self.del_entry,
+                                 "list_entries": self.list_entries } )
+
     def set_entry(self, name, val):
         self.vals[name] = val
 
@@ -85,6 +92,10 @@ class PubSubList(PubSubVar):
         self.vals = []
         PubSubVar.__init__(self, "list", desc)
 
+        self.rpc_funcs.update( { "append": self.append,
+                                 "remove": self.remove,
+                                 "len": self.len } )
+
     def len(self):
         return len(self.vals)
 
@@ -101,6 +112,9 @@ class PubSubScalar(PubSubVar):
     def __init__(self, val, vartype, desc):
         self.val = val
         PubSubVar.__init__(self, vartype, desc)
+
+        self.rpc_funcs.update( { "set": self.set,
+                                 "get": self.get } )
 
     def set(self, val):
         self.val = val
