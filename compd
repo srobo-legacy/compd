@@ -25,13 +25,15 @@ sys.path.append( os.path.dirname( os.path.abspath(__file__) ) )
 from vartree import PubSubDict
 
 if __name__ == "__main__":
+    base = PubSubDict( desc = "You should never see this" )
     root = PubSubDict( desc = "Root of the tree" )
+    base.set_entry( "sr", root )
     # TODO: Load backed-up variable tree from database
 
     loop = gobject.MainLoop()
     main_context = loop.get_context()
 
-    client.CompdServer(root, socket.AF_UNIX, COMPD_SOCKET)
-    client.CompdServer(root, socket.AF_INET, ("", COMPD_PORT) )
+    client.CompdServer(base, socket.AF_UNIX, COMPD_SOCKET)
+    client.CompdServer(base, socket.AF_INET, ("", COMPD_PORT) )
 
     loop.run()
