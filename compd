@@ -15,22 +15,23 @@
 # You should have received a copy of the GNU General Public License
 # along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
 import gobject, glib, sys, os
+import client, socket
+COMPD_SOCKET = "/tmp/compd"
+COMPD_PORT = 7600
 
 # Augment the import path with our own
 sys.path.append( os.path.dirname( os.path.abspath(__file__) ) )
 
-import workers, interfaces
 from vartree import PubSubDict
 
 if __name__ == "__main__":
     root = PubSubDict( desc = "Root of the tree" )
+    # TODO: Load backed-up variable tree from database
+
     loop = gobject.MainLoop()
     main_context = loop.get_context()
 
-    # Initialise all the workers
-    w = [ x(root) for x in workers.workers ]
-
-    # Same for the interfaces
-    ifs = [ x(root) for x in interfaces.interfaces ]
+    client.CompdServer(root, socket.AF_UNIX, COMPD_SOCKET)
+    client.CompdServer(root, socket.AF_INET, ("", COMPD_PORT) )
 
     loop.run()
