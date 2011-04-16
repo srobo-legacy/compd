@@ -41,16 +41,28 @@ class CompdClient(FramedClient):
 
         cmd_name = frame["command"]
 
+        if cmd_name == "subscribe":
+            var.subscribe( self._var_event, [path] )
+            self.write_frame( { "result": "OK" } )
+            return
+        elif cmd_name == "unsubscribe":
+            var.unsubscribe( self._var_event )
+            self.write_frame( { "result": "OK" } )
+            return
+
         if "args" in frame:
             cmd_args = frame["args"]
         else:
             cmd_args = {}
 
         fn = var.rpc_funcs[cmd_name]
-
         res = fn( **cmd_args )
 
         self.write_frame( { "result": res } )
+
+    def _var_event(self, val, varname):
+        print "event"
+        self.write_frame( { "event": { varname : val } } )
 
     def tx_frame(self, data):
         self.write_frame( data )
