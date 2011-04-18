@@ -26,8 +26,8 @@ from vartree import PubSubDict
 
 if __name__ == "__main__":
     base = PubSubDict( desc = "You should never see this" )
-    root = PubSubDict( desc = "Root of the tree" )
-    base.set_entry( "sr", root )
+    base.set_entry( "sr", "Root of the tree", "dict" )
+
     # TODO: Load backed-up variable tree from database
 
     loop = gobject.MainLoop()

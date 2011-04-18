@@ -75,8 +75,12 @@ class PubSubDict(PubSubVar):
                                  "del_entry": self.del_entry,
                                  "list_entries": self.list_entries } )
 
-    def set_entry(self, name, val):
-        self.vals[name] = val
+    def set_entry(self, name, desc, entry_type):
+        if entry_type not in TYPES:
+            raise Exception, "%s is not a valid type." % entry_type
+
+        v = TYPES[entry_type]( desc = desc )
+        self.vals[name] = v
 
     def get_entry(self, name):
         return self.vals[name]
@@ -105,8 +109,12 @@ class PubSubList(PubSubVar):
     def get_entry(self, index):
         return self.vals[index]
 
-    def append(self, val):
-        self.vals.append(val)
+    def append(self, desc, entry_type):
+        if entry_type not in TYPES:
+            raise Exception, "%s is not a valid type." % entry_type
+
+        v = TYPES[entry_type]( desc = desc )
+        self.vals.append(v)
 
 class PubSubScalar(PubSubVar):
     def __init__(self, val, vartype, desc):
@@ -124,9 +132,14 @@ class PubSubScalar(PubSubVar):
         return self.val
 
 class PubSubInt(PubSubScalar):
-    def __init__(self, val, desc):
-        PubSubScalar.__init__(self, val, "int", desc)
+    def __init__(self, desc):
+        PubSubScalar.__init__(self, 0, "int", desc)
 
 class PubSubString(PubSubScalar):
-    def __init__(self, val, desc):
-        PubSubScalar.__init__(self, val, "string", desc)
+    def __init__(self, desc):
+        PubSubScalar.__init__(self, "", "string", desc)
+
+TYPES = { "int": PubSubInt,
+          "string": PubSubString,
+          "dict": PubSubDict,
+          "list": PubSubList }
