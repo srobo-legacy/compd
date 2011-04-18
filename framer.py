@@ -148,3 +148,33 @@ class FramedClient:
 
         if self.write_source == None:
             glib.io_add_watch( self.sock, glib.IO_OUT, self._txready )
+
+class FramedSyncClient:
+    "A synchronous framed client"
+    def __init__(self, sock):
+        self.sock = sock
+        sock.setblocking(True)
+
+    def write_frame(self, fdata):
+        "Send the given frame"
+        fdata = json.dumps(fdata)
+        fdata = u32_to_str(len(fdata)) + fdata
+
+        self.sock.sendall( fdata )
+
+    def read_frame(self):
+        "Read a frame from the server"
+
+        l = ""
+        while len(l) < 4:
+            "Read the length bytes"
+            l += self.sock.recv( 4-len(l) )
+
+        l = str_to_u32(l)
+
+        d = ""
+        while len(d) < l:
+            "Read the data block"
+            d += self.sock.recv( l-len(d) )
+
+        return json.loads(d)
