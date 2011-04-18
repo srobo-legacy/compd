@@ -37,6 +37,21 @@ def resolve(root, varname):
 
     return val
 
+def unsubscribe(root, callback):
+    "Unsubscribe callback from all items under root"
+
+    root.unsubscribe(callback)
+
+    if isinstance( root, PubSubDict ):
+        "Unsubscribe all children"
+        for key in root.list_entries():
+            unsubscribe( root.get_entry(key), callback )
+
+    elif isinstance( root, PubSubList ):
+        "Unsubscribe all list entries"
+        for i in range(0, root.len()):
+            unsubscribe( root.get_entry(i), callback )
+
 class PubSubVar(object):
     "A subscribable variable"
     def __init__(self, vartype, desc):

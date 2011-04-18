@@ -31,7 +31,8 @@ def str_to_u32(s):
 class CompdClient(FramedClient):
     def __init__(self, sock, root, discon_cb):
         self.root = root
-        FramedClient.__init__(self, sock, discon_cb)
+        self._discon_cb = discon_cb
+        FramedClient.__init__(self, sock, self._discon)
 
     def rx_frame(self, frame):
         print "CompdClient received frame:", frame
@@ -67,6 +68,12 @@ class CompdClient(FramedClient):
     def tx_frame(self, data):
         self.write_frame( data )
 
+    def _discon(self, thing):
+        "Callback for when the client disconnects from us"
+
+        # Unregister all of our subscriptions
+        vartree.unsubscribe(self.root, self._var_event)
+        self._discon_cb(self)
 
 class CompdServer:
     def __init__(self, root, sock_type, address):
